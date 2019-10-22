@@ -74,22 +74,16 @@ int s_download  (int, char *);
 
 void *process(void *_sock)
 {
-    int sock = (long )_sock,
-        uid;
-
+    int sock, uid;
     unsigned char treq;
+    sock = (long )_sock;
 
     read(sock, &treq, 1);
-    if (!(treq < NTREQ1)) goto end;
-    
     switch (treq)
     {
-    case REGISTER:
-        uid = s_register(sock);
-        break;
-    case LOGIN:
-        uid = s_login(sock);
-        break;
+        case REGISTER:  uid = s_register(sock); break;
+        case LOGIN:     uid = s_login(sock);    break;
+        default:        goto end;
     }
     if (uid == -1) goto end;
 
@@ -100,23 +94,14 @@ void *process(void *_sock)
 
     while (read(sock, &treq, 1))
     {
-        if (!(NTREQ1 < treq && treq < NTREQ2)) goto end;
-
         int rval;
-
         switch (treq)
         {
-        case LIST:
-            rval = s_list(sock, dirname);
-            break;
-        case UPLOAD:
-            rval = s_upload(sock, dirname);
-            break;
-        case DOWNLOAD:
-            rval = s_download(sock, dirname);
-            break;
+            case LIST:      rval = s_list(sock, dirname);       break;
+            case UPLOAD:    rval = s_upload(sock, dirname);     break;
+            case DOWNLOAD:  rval = s_download(sock, dirname);   break;
+            default:        goto end;
         }
-
         if (rval == -1) break;
     }
 
@@ -129,7 +114,6 @@ void *process(void *_sock)
 int s_register(int sock)
 {
     user_t user;
-
     read(sock, &user, sizeof(user_t));
 
     if (-1 != userid(user.username))
@@ -147,7 +131,6 @@ int s_login(int sock)
     int uid;
 
     read(sock, &user, sizeof(user_t));
-
     uid = userid(user.username);
 
     if (uid == -1)
@@ -155,7 +138,6 @@ int s_login(int sock)
         send_str(sock, "no such user");
         return -1;
     }
-
     if (!checkpw(uid, user.password))
     {
         send_str(sock, "wrong password");
@@ -170,10 +152,10 @@ int s_list(int sock, char *dirname)
 {
     DIR *dir = opendir(dirname);
 
-    for (struct dirent *ent; ent = readdir(dir); )
-    {
-        send_str(sock, ent->d_name);
-    }
+    for(struct dirent *ent;
+        ent = readdir(dir);
+        send_str(sock, ent->d_name));
+
     send_str(sock, "//");
 
     closedir(dir);
